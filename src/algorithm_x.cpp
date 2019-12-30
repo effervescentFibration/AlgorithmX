@@ -12,7 +12,7 @@ ExactCoverProblem::ExactCoverProblem(std::string i,
   // First, copy over the problem description.
   this->items_description = i;
   this->options_description = o;
-  // Having copied the description, allocate the intrinstic data structures.
+  // Having copied the description, allocate the intrinsic data structures.
   initialize_problem();
   return;
 }
