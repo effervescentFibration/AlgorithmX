@@ -208,7 +208,7 @@ void ExactCoverProblem::hide(int64_t p) {
     } else {
       nodes[u].dlink = d;
       nodes[d].ulink = u;
-      // x has one fewer node.
+      // x has one less node.
       ItemNode *item_x = (ItemNode *)&nodes[x];
       --(item_x->len);
       ++q;
