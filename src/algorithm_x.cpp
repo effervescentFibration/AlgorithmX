@@ -1,65 +1,11 @@
-// #! clang++ -Wall -std=c++17 -march=native -o links links.cppo
-// g++ -std=c++17 -ggdb -Wall links.cpp -o links
-// mv links.cpp links_old.cpp; clang-format links_old.cpp > links.cpp
-
+#include "algorithm_x.h"
 #include <cstdint>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
 
-class ExactCoverProblem {
-public:
-  ExactCoverProblem(std::string i, std::vector<std::string> o);
-  ExactCoverProblem(ExactCoverProblem &other) = delete;
-  ExactCoverProblem(ExactCoverProblem &&other) = delete;
-  ExactCoverProblem operator=(ExactCoverProblem &other) = delete;
-  ExactCoverProblem operator=(ExactCoverProblem &&other) = delete;
-  ~ExactCoverProblem() {}
-
-  void solve();
-  std::string solution();
-  std::string to_aocp_table();
-
-private:
-  struct Item {
-    int64_t name;
-    int64_t llink;
-    int64_t rlink;
-  };
-
-  struct ItemNode {
-    int64_t len;
-    int64_t ulink;
-    int64_t dlink;
-  };
-
-  struct Node {
-    int64_t top;
-    int64_t ulink;
-    int64_t dlink;
-  };
-
-  void initialize_problem();
-  void initialize_items();
-  void initialize_nodes();
-
-  void place_spacer(size_t node_index, size_t option_index);
-  void place_node(size_t node_index, size_t item_index);
-  size_t choose_item_to_cover();
-  void algorithm_x();
-
-  void cover(int64_t i);
-  void uncover(int64_t i);
-  void hide(int64_t p);
-  void unhide(int64_t p);
-
-  std::string items_description;
-  std::vector<std::string> options_description;
-  std::vector<Item> items;
-  std::vector<Node> nodes;
-  std::vector<size_t> solution_vector;
-};
+namespace algorithm_x {
 
 ExactCoverProblem::ExactCoverProblem(std::string i,
                                      std::vector<std::string> o) {
@@ -71,10 +17,22 @@ ExactCoverProblem::ExactCoverProblem(std::string i,
   return;
 }
 
+ExactCoverProblem::ExactCoverProblem(ExactCoverProblem &other) = default;
+
+ExactCoverProblem::ExactCoverProblem(ExactCoverProblem &&other) = default;
+
+ExactCoverProblem &ExactCoverProblem::
+operator=(ExactCoverProblem &other) = default;
+
+ExactCoverProblem &ExactCoverProblem::
+operator=(ExactCoverProblem &&other) = default;
+
+ExactCoverProblem::~ExactCoverProblem() {}
+
 void ExactCoverProblem::initialize_problem() {
   initialize_items();
   initialize_nodes();
-  solution_vector.resize(options_description.size());
+  candidate.reserve(options_description.size());
 }
 
 void ExactCoverProblem::initialize_items() {
@@ -85,12 +43,11 @@ void ExactCoverProblem::initialize_items() {
   items[0].llink = items.size() - 1;
   items[0].rlink = 1;
   // Initialize the item nodes.
-  size_t i = 1;
+  int64_t i = 1;
   for (char item_name : items_description) {
     items[i].name = (int64_t)item_name;
     items[i].llink = i - 1;
-    items[i].rlink = (i + 1 != items.size()) ? (i + 1) : 0;
-
+    items[i].rlink = ((int64_t)items.size() != i + 1) ? (i + 1) : 0;
     ++i;
   }
 }
@@ -102,7 +59,7 @@ void ExactCoverProblem::initialize_nodes() {
    * and an extra header node. Since the items vector contains one entry for
    * each item plus a header node, double its count and take one away for these.
    */
-  size_t node_count = (2 * items.size()) - 1;
+  int64_t node_count = (2 * items.size()) - 1;
   // Now add one node for each presence of an item in each option.
   for (const std::string &option_name : options_description) {
     node_count += option_name.size();
@@ -114,7 +71,7 @@ void ExactCoverProblem::initialize_nodes() {
    */
 
   // i is the index of the node being allocated. We begin with the first node.
-  size_t i = 0;
+  int64_t i = 0;
   // Allocate the header.
   ItemNode *item_node = (ItemNode *)&nodes[i];
   item_node->len = 0;
@@ -122,7 +79,7 @@ void ExactCoverProblem::initialize_nodes() {
   item_node->dlink = 0;
 
   // Allocate one item node for each item.
-  for (i = 1; i <= items_description.size(); ++i) {
+  for (i = 1; i <= (int64_t)items_description.size(); ++i) {
     item_node = (ItemNode *)&nodes[i];
     /* To begin with, each item is listed in no options, and all its links are
      * self-references. This is essential for how later nodes are then added in.
@@ -141,7 +98,7 @@ void ExactCoverProblem::initialize_nodes() {
   int64_t option_index = 1;
 
   for (const std::string &option_name : options_description) {
-    size_t item_index = 1;
+    int64_t item_index = 1;
     for (char option_item : option_name) {
       while (items[item_index].name < (int64_t)option_item) {
         ++item_index;
@@ -157,7 +114,7 @@ void ExactCoverProblem::initialize_nodes() {
   }
 }
 
-void ExactCoverProblem::place_spacer(size_t node_index, size_t option_index) {
+void ExactCoverProblem::place_spacer(int64_t node_index, int64_t option_index) {
   Node *node = &nodes[node_index]; // The node to be set.
   /* Per Knuth (p. 67), ulink will be the index of the last node of the next
    * option; ulink will be the index of the first node of the previous option.
@@ -178,7 +135,7 @@ void ExactCoverProblem::place_spacer(size_t node_index, size_t option_index) {
   /* If this option isn't for the last spacer, have dlink point into nodes
    * for the next option.
    */
-  if (option_index < options_description.size() - 1) {
+  if (option_index < (int64_t)options_description.size()) {
     node->dlink = node_index + options_description[option_index].size();
   }
   // Otherwise, there is no such node. Set the null link.
@@ -187,7 +144,7 @@ void ExactCoverProblem::place_spacer(size_t node_index, size_t option_index) {
   }
 }
 
-void ExactCoverProblem::place_node(size_t node_index, size_t item_index) {
+void ExactCoverProblem::place_node(int64_t node_index, int64_t item_index) {
   ItemNode *item_node =
       (ItemNode *)&nodes[item_index]; // The node for this item.
   Node *node = &nodes[node_index];    // The node to be set.
@@ -199,7 +156,7 @@ void ExactCoverProblem::place_node(size_t node_index, size_t item_index) {
     node->ulink = item_index;
   } else {
     // Otherwise, there is a regular node above this. Grab it.
-    size_t prev_index = item_node->ulink;
+    int64_t prev_index = item_node->ulink;
     Node *prev_node = &nodes[prev_index];
     prev_node->dlink = node_index;
     node->ulink = prev_index;
@@ -212,7 +169,7 @@ void ExactCoverProblem::place_node(size_t node_index, size_t item_index) {
   // The node's top will be the item.
   node->top = item_index;
   // Also increment the length of item.
-  ++(item_node->len);
+  (item_node->len) += 1;
 }
 
 void ExactCoverProblem::cover(int64_t i) {
@@ -254,9 +211,6 @@ void ExactCoverProblem::hide(int64_t p) {
       // x has one fewer node.
       ItemNode *item_x = (ItemNode *)&nodes[x];
       --(item_x->len);
-      if ((item_x->len) < 0)
-        while (true)
-          ;
       ++q;
     }
   }
@@ -284,36 +238,23 @@ void ExactCoverProblem::unhide(int64_t p) {
 
 void ExactCoverProblem::solve() { algorithm_x(); }
 
-std::string ExactCoverProblem::solution() {
-  std::basic_stringstream<char> ss;
-  for (size_t i = 0; i < solution_vector.size(); ++i) {
-    if (solution_vector[i] == 0) {
-      continue;
-    }
-    size_t option_index = -(nodes[solution_vector[i]].top) - 1;
-    ss << options_description[option_index];
-  }
-  return ss.str();
-}
-
 void ExactCoverProblem::algorithm_x() {
   /*
    * This is an implementation of Donald Knuth's Algorithm X
    * as posed in _The Art of Computer Programming_,
    * volume 4, fascicle 5 (p. 67). It's a fairly straightforward
-   * translation of the pseudocode into idiomatic C++.
+   * translation of the pseudocode into idiomatic C++. In particular, it
+   * foregoes recursion, structured control flow or any inversions of the same.
    */
 
   /* X1
    * Initialize.
    */
   // x1:
-  size_t n = items_description.size();
-  size_t z = nodes.size();
-  size_t l = 0;
-  size_t p;
-  size_t j;
-  size_t i;
+  int64_t l = 0;
+  int64_t p;
+  int64_t j;
+  int64_t i;
   goto x2;
 
   /* X2
@@ -322,6 +263,7 @@ void ExactCoverProblem::algorithm_x() {
 x2:
   if (items[0].rlink == 0) {
     // All items have been covered.
+    append_solution();
     goto x8;
   }
 
@@ -339,22 +281,23 @@ x2:
    */
   // x4:
   cover(i);
-  solution_vector[l] = nodes[i].dlink;
+  candidate.push_back(nodes[i].dlink);
+  goto x5;
 
   /* X5
    * Try x_l.
    */
 x5:
-  if (solution_vector[l] == i) {
-    // We've tried all options for i.
-    while (true)
-      ;
+  if (candidate[l] == i) {
+    /* We've tried all options for i to no avail. We must backtrack. */
     goto x7;
   } else {
-    p = solution_vector[l] + 1;
-    while (p != solution_vector[l]) {
-      j = nodes[solution_vector[l]].top;
+    p = candidate[l] + 1;
+    while (p != candidate[l]) {
+      j = nodes[p].top;
+
       if (j <= 0) {
+        // This is a spacer
         p = nodes[p].ulink;
       } else {
         // Cover the items != i in the option that contains x + l.
@@ -371,8 +314,8 @@ x5:
    * Try again.
    */
 x6:
-  p = solution_vector[l] - 1;
-  while (p != solution_vector[l]) {
+  p = candidate[l] - 1;
+  while (p != candidate[l]) {
     j = nodes[p].top;
     if (j <= 0) {
       p = nodes[p].dlink;
@@ -381,8 +324,8 @@ x6:
       --p;
     }
   }
-  i = nodes[solution_vector[l]].top;
-  solution_vector[l] = nodes[solution_vector[l]].dlink;
+  i = nodes[candidate[l]].top;
+  candidate[l] = nodes[candidate[l]].dlink;
   goto x5;
 
   /* X7
@@ -390,8 +333,7 @@ x6:
    */
 x7:
   uncover(i);
-  while (true)
-    ;
+
   /* X8
    * Exit level l.
    */
@@ -399,37 +341,126 @@ x8:
   if (l == 0) {
     return;
   }
+  candidate.pop_back();
   --l;
   goto x6;
 }
 
-/*
- * Use the MRV heuristic from exercise 8.
+/* append_solution() stores a vector of strings, each representing an option
+ * chosen fo the solution. Each option is represented in accordance with
+ * exercise 12 (p. 123), where the representation is rotated to the left such
+ * that the item that led to that option being chosen is printed first. For
+ * instance, if the item "d" led to the option "adf" being chosen, this choice
+ * would be represented as "dfa".
  */
-size_t ExactCoverProblem::choose_item_to_cover() {
+void ExactCoverProblem::append_solution() {
+  std::vector<std::string> solution;
+
+  for (int64_t rep_index : candidate) {
+    /* Get the index of the item this representative refers to so the item so we
+     * can find the item that led to this choice of option. */
+    int64_t item_index = nodes[rep_index].top;
+    Item *item = (Item *)&nodes[item_index];
+    char item_name = (char)item->name;
+
+    /* The first spacer to follow this node will have a top the negative of
+     * which is the index of the first option in the representation. Find it by
+     * incrementing rep_index until the spacer is found.
+     */
+    while (nodes[rep_index].top > 0) {
+      --rep_index;
+    }
+
+    int64_t option_index = -(nodes[rep_index].top);
+    std::string *option_name = &options_description[option_index];
+
+    // We write out the option as led by the representative item.
+    std::basic_stringstream<char> ss;
+    ss << item_name;
+    int64_t offset = 0; /* the offset represents the index of the representative
+                           item in the original option representation */
+    for (char c : *option_name) {
+      if (c == item_name) {
+        break;
+      }
+      ++offset;
+    }
+    /* Having found the offset, cycle through the original option representation
+     * starting with the representative item. */
+    int64_t option_size = option_name->size();
+    for (int64_t i = 0; i < option_size; ++i) {
+      ss << (*option_name)[(i + offset) % option_size];
+    }
+    solution.push_back(ss.str());
+  }
+  solutions.push_back(solution);
+}
+
+std::string ExactCoverProblem::solutions_string() {
+  // Exit early for an empty solutions vector.
+  if (solutions.size() == 0) {
+    return ("The solution set is empty. "
+            "Either it has no solution, "
+            "or you never invoked solve().");
+  }
+
+  std::basic_stringstream<char> ss;
+  /* We will comma separate solutions and the options in each solution. Indices
+   * are used to track these.
+   */
+  int64_t i = 0;
+  for (const std::vector<std::string> &solution_vec : solutions) {
+    // If this isn't the first solution, add a comma to separate it.
+    if (i > 0) {
+      ss << ", ";
+    }
+    ss << "{";
+    int64_t j = 0;
+    for (const std::string &solution : solution_vec) {
+      // If this isn't the first option, add a comma to separate it.
+      if (j > 0) {
+        ss << ", ";
+      }
+      ss << solution;
+      ++j;
+    }
+    ss << "}";
+    ++i;
+  }
+  return ss.str();
+}
+
+/*
+ * For this implementation, we use the MRV (minimum remaining values) heuristic
+ * from exercise 9 (p. 123).
+ */
+int64_t ExactCoverProblem::choose_item_to_cover() {
   int64_t shortest = INT64_MAX; // Start at the top of the lattice.
   int64_t shortest_index = -1;
   int64_t i = items[0].rlink;
-  do {
+  while (i != 0) {
     ItemNode *item_node = (ItemNode *)&nodes[i];
-    if (item_node->len > 0 && item_node->len < shortest) {
+    if (item_node->len < shortest) {
       shortest = item_node->len;
       shortest_index = i;
     }
     i = items[i].rlink;
-  } while (i != 0);
+  }
   return shortest_index;
 }
 
+/* This method outputs a table formatted like Table 1 in The Art of Computer
+ * Programming, volume 4, fascicle 5 (p. 66). It's useful both for debugging and
+ * for better understanding the functioning of the algorithm. */
 std::string ExactCoverProblem::to_aocp_table() {
   std::basic_stringstream<char> ss;
-  size_t item_count = items.size();
-  size_t node_count = nodes.size();
+  int64_t item_count = items.size();
+  int64_t node_count = nodes.size();
   ss << "Items: " << item_count << "\n";
   ss << "Nodes: " << node_count << "\n";
   ss << "i:"
      << "\t\t";
-  for (size_t i = 0; i < item_count; ++i) {
+  for (int64_t i = 0; i < item_count; ++i) {
     ss << i << "\t";
   }
   ss << "\n";
@@ -459,23 +490,23 @@ std::string ExactCoverProblem::to_aocp_table() {
   }
   ss << "\n";
 
-  size_t row_count = ((node_count - 1) / item_count) + 1;
-  for (size_t row = 0; row < row_count; ++row) {
+  int64_t row_count = ((node_count - 1) / item_count) + 1;
+  for (int64_t row = 0; row < row_count; ++row) {
     /*
      * The bound determines how many nodes to place in the row.
      * It's just the item count in all but the last row, which may be
-     * incomplete. If the last row is incomplete, it is the those nodes
+     * incomplete. If the last row is incomplete, it is just those nodes
      * remaining.
      */
-    size_t bound = item_count;
+    int64_t bound = item_count;
     if (row == (row_count - 1)) {
       bound = node_count % item_count;
     }
 
     ss << "x:"
        << "\t\t";
-    for (size_t i = 0; i < bound; ++i) {
-      size_t x = i + (row * item_count);
+    for (int64_t i = 0; i < bound; ++i) {
+      int64_t x = i + (row * item_count);
       ss << x << "\t";
     }
     ss << "\n";
@@ -483,16 +514,16 @@ std::string ExactCoverProblem::to_aocp_table() {
     if (row == 0) {
       ss << "LEN(x):"
          << "\t\t";
-      for (size_t i = 0; i < bound; ++i) {
-        size_t x = i + (row * item_count);
+      for (int64_t i = 0; i < bound; ++i) {
+        int64_t x = i + (row * item_count);
         ItemNode *item_node = (ItemNode *)&nodes[x];
         ss << item_node->len << "\t";
       }
     } else {
       ss << "TOP(x):"
          << "\t\t";
-      for (size_t i = 0; i < bound; ++i) {
-        size_t x = i + (row * item_count);
+      for (int64_t i = 0; i < bound; ++i) {
+        int64_t x = i + (row * item_count);
         ss << nodes[x].top << "\t";
       }
     }
@@ -500,16 +531,16 @@ std::string ExactCoverProblem::to_aocp_table() {
 
     ss << "ULINK(x):"
        << "\t";
-    for (size_t i = 0; i < bound; ++i) {
-      size_t x = i + (row * item_count);
+    for (int64_t i = 0; i < bound; ++i) {
+      int64_t x = i + (row * item_count);
       ss << nodes[x].ulink << "\t";
     }
     ss << "\n";
 
     ss << "DLINK(x):"
        << "\t";
-    for (size_t i = 0; i < bound; ++i) {
-      size_t x = i + (row * item_count);
+    for (int64_t i = 0; i < bound; ++i) {
+      int64_t x = i + (row * item_count);
       ss << nodes[x].dlink << "\t";
     }
     ss << "\n";
@@ -517,13 +548,4 @@ std::string ExactCoverProblem::to_aocp_table() {
   return ss.str();
 }
 
-int main(int argc, char *argv[]) {
-  ExactCoverProblem p{"abcdefg", std::vector<std::string>{"ce", "adg", "bcf",
-                                                          "adf", "bg", "deg"}};
-  std::cout << p.to_aocp_table();
-  std::cout << "Solving...\n";
-  p.solve();
-  std::cout << "Solved!\n";
-  std::cout << p.solution();
-  return 0;
-}
+} // namespace algorithm_x

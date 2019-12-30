@@ -1,5 +1,5 @@
 flags = -std=c++17 -Wall
-args = links.cpp -o links
+args = src/algorithm_x.cpp src/main.cpp -o bin/algorithm_x
 
 debug_flags = -ggdb -O0 $(flags)
 debug_args = $(debug_flags) $(args)
@@ -16,4 +16,4 @@ debug:
 	clang++ $(debug_args) && g++ $(debug_args)
 
 clean:
-	rm ./link
+	rm ./bin/algorithm_x
