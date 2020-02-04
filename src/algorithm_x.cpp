@@ -1,6 +1,8 @@
 #include "algorithm_x.h"
+#include <algorithm>
 #include <cstdint>
 #include <iostream>
+#include <iterator>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -9,6 +11,32 @@ namespace algorithm_x {
 
 ExactCoverProblem::ExactCoverProblem(std::string i,
                                      std::vector<std::string> o) {
+  has_string_description = true;
+  // First, copy over the items description.
+  items_description.reserve(i.size());
+  for (char c : i) {
+    items_description.push_back(c);
+  }
+
+  // Next, copy over the options description.
+  options_description.reserve(o.size());
+  for (const std::string &option_name : o) {
+    options_description.push_back({});
+    std::vector<int64_t> &option = options_description.back();
+    for (char c : option_name) {
+      option.push_back(c);
+    }
+  }
+
+  // Having copied the problem description, allocate the intrinsic data
+  // structures.
+  initialize_problem();
+  return;
+}
+
+ExactCoverProblem::ExactCoverProblem(std::vector<int64_t> i,
+                                     std::vector<std::vector<int64_t>> o) {
+  has_string_description = false;
   // First, copy over the problem description.
   this->items_description = i;
   this->options_description = o;
@@ -30,6 +58,8 @@ operator=(ExactCoverProblem &&other) = default;
 ExactCoverProblem::~ExactCoverProblem() {}
 
 void ExactCoverProblem::initialize_problem() {
+  // The problem is initialized in an unsolved state.
+  solved = false;
   initialize_items();
   initialize_nodes();
   candidate.reserve(options_description.size());
@@ -44,8 +74,8 @@ void ExactCoverProblem::initialize_items() {
   items[0].rlink = 1;
   // Initialize the item nodes.
   int64_t i = 1;
-  for (char item_name : items_description) {
-    items[i].name = (int64_t)item_name;
+  for (int64_t item_name : items_description) {
+    items[i].name = item_name;
     items[i].llink = i - 1;
     items[i].rlink = ((int64_t)items.size() != i + 1) ? (i + 1) : 0;
     ++i;
@@ -61,7 +91,7 @@ void ExactCoverProblem::initialize_nodes() {
    */
   int64_t node_count = (2 * items.size()) - 1;
   // Now add one node for each presence of an item in each option.
-  for (const std::string &option_name : options_description) {
+  for (const std::vector<int64_t> &option_name : options_description) {
     node_count += option_name.size();
   }
 
@@ -89,7 +119,7 @@ void ExactCoverProblem::initialize_nodes() {
     item_node->dlink = i;
   }
 
-  // Initialize first spacer and move increment the node index.
+  // Initialize first spacer and increment the node index.
   nodes[i].top = 0;
   nodes[i].ulink = 0;
   nodes[i].dlink = i + options_description[0].size();
@@ -97,10 +127,10 @@ void ExactCoverProblem::initialize_nodes() {
 
   int64_t option_index = 1;
 
-  for (const std::string &option_name : options_description) {
+  for (const std::vector<int64_t> &option_name : options_description) {
     int64_t item_index = 1;
-    for (char option_item : option_name) {
-      while (items[item_index].name < (int64_t)option_item) {
+    for (int64_t option_item : option_name) {
+      while (items[item_index].name < option_item) {
         ++item_index;
       }
       place_node(i, item_index);
@@ -236,7 +266,12 @@ void ExactCoverProblem::unhide(int64_t p) {
   }
 }
 
-void ExactCoverProblem::solve() { algorithm_x(); }
+void ExactCoverProblem::solve() {
+  if (!solved) {
+    algorithm_x();
+    solved = true;
+  }
+}
 
 void ExactCoverProblem::algorithm_x() {
   /*
@@ -354,14 +389,15 @@ x8:
  * would be represented as "dfa".
  */
 void ExactCoverProblem::append_solution() {
-  std::vector<std::string> solution;
+  solutions.push_back({});
+  std::vector<std::vector<int64_t>> &solution = solutions.back();
 
   for (int64_t rep_index : candidate) {
     /* Get the index of the item this representative refers to so the item so we
      * can find the item that led to this choice of option. */
     int64_t item_index = nodes[rep_index].top;
     Item *item = (Item *)&nodes[item_index];
-    char item_name = (char)item->name;
+    int64_t item_name = item->name;
 
     /* The first spacer to follow this node will have a top the negative of
      * which is the index of the first option in the representation. Find it by
@@ -372,15 +408,15 @@ void ExactCoverProblem::append_solution() {
     }
 
     int64_t option_index = -(nodes[rep_index].top);
-    std::string *option_name = &options_description[option_index];
+    std::vector<int64_t> *option_name = &options_description[option_index];
 
-    // We write out the option as led by the representative item.
-    std::basic_stringstream<char> ss;
-    ss << item_name;
+    // We write out the option as led by the representative item into
+    // option_rep.
+    std::vector<int64_t> option_rep{item_name};
     int64_t offset = 0; /* the offset represents the index of the representative
                            item in the original option representation */
-    for (char c : *option_name) {
-      if (c == item_name) {
+    for (int64_t option_item : *option_name) {
+      if (option_item == item_name) {
         break;
       }
       ++offset;
@@ -389,11 +425,35 @@ void ExactCoverProblem::append_solution() {
      * starting with the representative item. */
     int64_t option_size = option_name->size();
     for (int64_t i = 0; i < option_size; ++i) {
-      ss << (*option_name)[(i + offset) % option_size];
+      int64_t item = (*option_name)[(i + offset) % option_size];
+      option_rep.push_back(item);
     }
-    solution.push_back(ss.str());
+    solution.push_back(std::move(option_rep));
   }
-  solutions.push_back(solution);
+  // solutions.push_back(std::move(solution));
+}
+
+std::string ExactCoverProblem::option_str(const std::vector<int64_t> &option) {
+  std::stringstream ss;
+  if (has_string_description) {
+    for (int64_t i : option) {
+      ss << (char)i;
+    }
+  } else {
+    for (int64_t i = 0; i < (int64_t)option.size(); ++i) {
+      if (i > 0) {
+        // We separate item IDs with commas.
+        ss << ':';
+      }
+      ss << option[i];
+    }
+  }
+  return ss.str();
+}
+
+const std::vector<std::vector<std::vector<int64_t>>> &
+ExactCoverProblem::get_solutions() {
+  return solutions;
 }
 
 std::string ExactCoverProblem::solutions_string() {
@@ -409,19 +469,19 @@ std::string ExactCoverProblem::solutions_string() {
    * are used to track these.
    */
   int64_t i = 0;
-  for (const std::vector<std::string> &solution_vec : solutions) {
+  for (const std::vector<std::vector<int64_t>> &solution_vec : solutions) {
     // If this isn't the first solution, add a comma to separate it.
     if (i > 0) {
       ss << ", ";
     }
     ss << "{";
     int64_t j = 0;
-    for (const std::string &solution : solution_vec) {
+    for (const std::vector<int64_t> &option : solution_vec) {
       // If this isn't the first option, add a comma to separate it.
       if (j > 0) {
         ss << ", ";
       }
-      ss << solution;
+      ss << option_str(option);
       ++j;
     }
     ss << "}";
@@ -467,12 +527,16 @@ std::string ExactCoverProblem::to_aocp_table() {
 
   ss << "NAME(i):"
      << "\t";
+  int64_t i = 0;
   for (const Item &item : items) {
-    if (char(item.name) < 'a') {
-      ss << item.name << "\t";
-    } else {
+    // The first item slot is always null.
+    // Don't output it as a character.
+    if (has_string_description && i > 0) {
       ss << char(item.name) << "\t";
+    } else {
+      ss << item.name << "\t";
     }
+    ++i;
   }
   ss << "\n";
 

@@ -12,6 +12,8 @@ namespace algorithm_x {
 class ExactCoverProblem {
 public:
   ExactCoverProblem(std::string i, std::vector<std::string> o);
+  ExactCoverProblem(std::vector<int64_t> i,
+                    std::vector<std::vector<int64_t>> o);
   ExactCoverProblem(ExactCoverProblem &other);
   ExactCoverProblem(ExactCoverProblem &&other);
   ExactCoverProblem &operator=(ExactCoverProblem &other);
@@ -21,6 +23,8 @@ public:
   void solve();
   std::string solutions_string();
   std::string to_aocp_table();
+
+  const std::vector<std::vector<std::vector<int64_t>>> &get_solutions();
 
 private:
   struct Item {
@@ -56,12 +60,21 @@ private:
   void hide(int64_t p);
   void unhide(int64_t p);
 
-  std::string items_description;
-  std::vector<std::string> options_description;
+  std::string option_str(const std::vector<int64_t> &option);
+
+  /**
+   * The has_string_description boolean indicates whether items are encoded as
+   * (8-bit ASCII) characters and whether options are encoded as strings of
+   * these.
+   */
+  bool has_string_description;
+  bool solved;
+  std::vector<int64_t> items_description;
+  std::vector<std::vector<int64_t>> options_description;
   std::vector<Item> items;
   std::vector<Node> nodes;
   std::vector<int64_t> candidate;
-  std::vector<std::vector<std::string>> solutions;
+  std::vector<std::vector<std::vector<int64_t>>> solutions;
 };
 
 } // namespace algorithm_x
