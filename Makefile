@@ -4,7 +4,7 @@ args = src/algorithm_x.cpp src/langford_pairs.cpp src/main.cpp -o bin/algorithm_
 debug_flags = -ggdb -O0 $(flags)
 debug_args = $(debug_flags) $(args)
 
-release_flags = -O3 $(flags)
+release_flags = -O3 -mtune=native $(flags)
 release_args = $(release_flags) $(args)
 
 

@@ -8,17 +8,18 @@
 #include <vector>
 
 namespace algorithm_x {
-class LangfordPairsProblem : XcEquivalentProblem {
+class LangfordPairsProblem : public XcEquivalentProblem {
 public:
+  LangfordPairsProblem() = delete;
   LangfordPairsProblem(int64_t n);
-  LangfordPairsProblem(LangfordPairsProblem &other);
-  LangfordPairsProblem(LangfordPairsProblem &&other);
-  LangfordPairsProblem &operator=(LangfordPairsProblem &other);
-  LangfordPairsProblem &operator=(LangfordPairsProblem &&other);
+  LangfordPairsProblem(LangfordPairsProblem &other) = delete;
+  LangfordPairsProblem(LangfordPairsProblem &&other) = delete;
+  LangfordPairsProblem &operator=(LangfordPairsProblem &other) = delete;
+  LangfordPairsProblem &operator=(LangfordPairsProblem &&other) = delete;
   ~LangfordPairsProblem();
 
-  void solve();
-  std::string solutions_string();
+  void solve(bool find_all_solutions=true);
+  const std::string solutions_string();
 
 private:
   int64_t n;

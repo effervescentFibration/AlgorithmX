@@ -20,11 +20,11 @@ public:
   ExactCoverProblem &operator=(ExactCoverProblem &&other);
   ~ExactCoverProblem();
 
-  void solve();
-  std::string solutions_string();
-  std::string to_aocp_table();
+  void solve(bool find_all_solutions = true);
+  const std::string solutions_string() const;
+  const std::string to_aocp_table() const;
 
-  const std::vector<std::vector<std::vector<int64_t>>> &get_solutions();
+  const std::vector<std::vector<std::vector<int64_t>>> &get_solutions() const;
 
 private:
   struct Item {
@@ -52,7 +52,7 @@ private:
   void place_spacer(int64_t node_index, int64_t option_index);
   void place_node(int64_t node_index, int64_t item_index);
   int64_t choose_item_to_cover();
-  void algorithm_x();
+  void algorithm_x(bool find_all_solutions);
   void append_solution();
 
   void cover(int64_t i);
@@ -60,7 +60,7 @@ private:
   void hide(int64_t p);
   void unhide(int64_t p);
 
-  std::string option_str(const std::vector<int64_t> &option);
+  const std::string option_str(const std::vector<int64_t> &option) const;
 
   /**
    * The has_string_description boolean indicates whether items are encoded as

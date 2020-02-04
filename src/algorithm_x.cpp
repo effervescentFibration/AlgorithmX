@@ -40,6 +40,7 @@ ExactCoverProblem::ExactCoverProblem(std::vector<int64_t> i,
   // First, copy over the problem description.
   this->items_description = i;
   this->options_description = o;
+
   // Having copied the description, allocate the intrinsic data structures.
   initialize_problem();
   return;
@@ -84,13 +85,16 @@ void ExactCoverProblem::initialize_items() {
 
 void ExactCoverProblem::initialize_nodes() {
   /*
-   * First, find the right number of nodes.
-   * There will be node to represent each item, one spacer node for each item,
-   * and an extra header node. Since the items vector contains one entry for
-   * each item plus a header node, double its count and take one away for these.
+   * First, find the right number of nodes. This count is based on the diagram shown in Knuth (p.66).
+   *
+   * In the option items list, there will be one header node for each item after a spacer. This is equal to the total number of item nodes (which is one more than the total number of items. There will also be one space for each option, one node for each item's presence in an option, and one final spacer node.
+   *
+   * This brings the total allocated node count to:
+   *   (# item nodes) + (# options) + (# item options) + 1
+   * The logic below simply carries this calculation out.
    */
-  int64_t node_count = (2 * items.size()) - 1;
-  // Now add one node for each presence of an item in each option.
+  
+  int64_t  node_count = items.size() + options_description.size() + 1;
   for (const std::vector<int64_t> &option_name : options_description) {
     node_count += option_name.size();
   }
@@ -266,14 +270,14 @@ void ExactCoverProblem::unhide(int64_t p) {
   }
 }
 
-void ExactCoverProblem::solve() {
+void ExactCoverProblem::solve(bool find_all_solutions) {
   if (!solved) {
-    algorithm_x();
+    algorithm_x(find_all_solutions);
     solved = true;
   }
 }
 
-void ExactCoverProblem::algorithm_x() {
+void ExactCoverProblem::algorithm_x(bool find_all_solutions) {
   /*
    * This is an implementation of Donald Knuth's Algorithm X
    * as posed in _The Art of Computer Programming_,
@@ -299,6 +303,12 @@ x2:
   if (items[0].rlink == 0) {
     // All items have been covered.
     append_solution();
+
+    /*
+     * Here we deviate from Knuth. If find_all_solutions is false, then we return right now, having found a solution. Otherwise, we jump to X8, as in Knuth.
+     */
+    if (!find_all_solutions) return;
+
     goto x8;
   }
 
@@ -382,7 +392,7 @@ x8:
 }
 
 /* append_solution() stores a vector of strings, each representing an option
- * chosen fo the solution. Each option is represented in accordance with
+ * chosen in the solution. Each option is represented in accordance with
  * exercise 12 (p. 123), where the representation is rotated to the left such
  * that the item that led to that option being chosen is printed first. For
  * instance, if the item "d" led to the option "adf" being chosen, this choice
@@ -393,7 +403,7 @@ void ExactCoverProblem::append_solution() {
   std::vector<std::vector<int64_t>> &solution = solutions.back();
 
   for (int64_t rep_index : candidate) {
-    /* Get the index of the item this representative refers to so the item so we
+    /* Get the index of the item this representative refers to so we
      * can find the item that led to this choice of option. */
     int64_t item_index = nodes[rep_index].top;
     Item *item = (Item *)&nodes[item_index];
@@ -433,7 +443,7 @@ void ExactCoverProblem::append_solution() {
   // solutions.push_back(std::move(solution));
 }
 
-std::string ExactCoverProblem::option_str(const std::vector<int64_t> &option) {
+const std::string ExactCoverProblem::option_str(const std::vector<int64_t> &option) const {
   std::stringstream ss;
   if (has_string_description) {
     for (int64_t i : option) {
@@ -452,11 +462,11 @@ std::string ExactCoverProblem::option_str(const std::vector<int64_t> &option) {
 }
 
 const std::vector<std::vector<std::vector<int64_t>>> &
-ExactCoverProblem::get_solutions() {
+ExactCoverProblem::get_solutions() const {
   return solutions;
 }
 
-std::string ExactCoverProblem::solutions_string() {
+const std::string ExactCoverProblem::solutions_string() const {
   // Exit early for an empty solutions vector.
   if (solutions.size() == 0) {
     return ("The solution set is empty. "
@@ -512,7 +522,7 @@ int64_t ExactCoverProblem::choose_item_to_cover() {
 /* This method outputs a table formatted like Table 1 in The Art of Computer
  * Programming, volume 4, fascicle 5 (p. 66). It's useful both for debugging and
  * for better understanding the functioning of the algorithm. */
-std::string ExactCoverProblem::to_aocp_table() {
+const std::string ExactCoverProblem::to_aocp_table() const {
   std::basic_stringstream<char> ss;
   int64_t item_count = items.size();
   int64_t node_count = nodes.size();
@@ -563,7 +573,7 @@ std::string ExactCoverProblem::to_aocp_table() {
      * remaining.
      */
     int64_t bound = item_count;
-    if (row == (row_count - 1)) {
+    if (row == (row_count - 1) && node_count % item_count) {
       bound = node_count % item_count;
     }
 
