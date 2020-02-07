@@ -85,16 +85,21 @@ void ExactCoverProblem::initialize_items() {
 
 void ExactCoverProblem::initialize_nodes() {
   /*
-   * First, find the right number of nodes. This count is based on the diagram shown in Knuth (p.66).
+   * First, find the right number of nodes. This count is based on the diagram
+   * shown in Knuth (p.66).
    *
-   * In the option items list, there will be one header node for each item after a spacer. This is equal to the total number of item nodes (which is one more than the total number of items. There will also be one space for each option, one node for each item's presence in an option, and one final spacer node.
+   * In the option items list, there will be one header node for each item after
+   * a spacer. This is equal to the total number of item nodes (which is one
+   * more than the total number of items. There will also be one space for each
+   * option, one node for each item's presence in an option, and one final
+   * spacer node.
    *
    * This brings the total allocated node count to:
    *   (# item nodes) + (# options) + (# item options) + 1
    * The logic below simply carries this calculation out.
    */
-  
-  int64_t  node_count = items.size() + options_description.size() + 1;
+
+  int64_t node_count = items.size() + options_description.size() + 1;
   for (const std::vector<int64_t> &option_name : options_description) {
     node_count += option_name.size();
   }
@@ -305,9 +310,12 @@ x2:
     append_solution();
 
     /*
-     * Here we deviate from Knuth. If find_all_solutions is false, then we return right now, having found a solution. Otherwise, we jump to X8, as in Knuth.
+     * Here we deviate from Knuth. If find_all_solutions is false, then we
+     * return right now, having found a solution. Otherwise, we jump to X8, as
+     * in Knuth.
      */
-    if (!find_all_solutions) return;
+    if (!find_all_solutions)
+      return;
 
     goto x8;
   }
@@ -422,7 +430,7 @@ void ExactCoverProblem::append_solution() {
 
     // We write out the option as led by the representative item into
     // option_rep.
-    std::vector<int64_t> option_rep{item_name};
+    std::vector<int64_t> option_rep{};
     int64_t offset = 0; /* the offset represents the index of the representative
                            item in the original option representation */
     for (int64_t option_item : *option_name) {
@@ -440,10 +448,10 @@ void ExactCoverProblem::append_solution() {
     }
     solution.push_back(std::move(option_rep));
   }
-  // solutions.push_back(std::move(solution));
 }
 
-const std::string ExactCoverProblem::option_str(const std::vector<int64_t> &option) const {
+const std::string
+ExactCoverProblem::option_str(const std::vector<int64_t> &option) const {
   std::stringstream ss;
   if (has_string_description) {
     for (int64_t i : option) {

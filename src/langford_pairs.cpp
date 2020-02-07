@@ -1,9 +1,9 @@
 #include "langford_pairs.h"
 #include "algorithm_x.h"
 #include <cstdint>
+#include <iostream>
 #include <stdexcept>
 #include <string>
-#include <iostream>
 
 namespace algorithm_x {
 LangfordPairsProblem::LangfordPairsProblem(int64_t n) {
@@ -17,8 +17,7 @@ LangfordPairsProblem::LangfordPairsProblem(int64_t n) {
   return;
 }
 
-LangfordPairsProblem::~LangfordPairsProblem() {
-}
+LangfordPairsProblem::~LangfordPairsProblem() {}
 
 void LangfordPairsProblem::initialize() {
   /* We represent the n different numbers (each of which appears twice in the
@@ -37,11 +36,12 @@ void LangfordPairsProblem::initialize() {
        */
       int64_t s_j = n + j;
       int64_t s_k = n + k;
-      std::vector<int64_t> option {i};
+      std::vector<int64_t> option{i};
       // Here will just follow the option definition given in Knuth (p. 68).
       option.push_back(s_j);
       option.push_back(s_k);
-      std::cout << "Option size here is emphatically" << option.size() << std::endl;
+      std::cout << "Option size here is emphatically" << option.size()
+                << std::endl;
       options.push_back(option);
     }
   }

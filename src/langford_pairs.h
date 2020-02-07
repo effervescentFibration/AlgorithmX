@@ -18,7 +18,7 @@ public:
   LangfordPairsProblem &operator=(LangfordPairsProblem &&other) = delete;
   ~LangfordPairsProblem();
 
-  void solve(bool find_all_solutions=true);
+  void solve(bool find_all_solutions = true);
   const std::string solutions_string();
 
 private:

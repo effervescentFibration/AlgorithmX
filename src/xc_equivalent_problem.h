@@ -16,7 +16,7 @@ public:
   /* Solve should invole exact_cover_problem.solve() and use
    * exact_cover_problem's solution to generate a solution to the underlying
    * problem. */
-  void solve(bool find_all_solutions=true) {}
+  void solve(bool find_all_solutions = true) {}
 
   const ExactCoverProblem &get_exact_cover_problem() {
     return *exact_cover_problem;

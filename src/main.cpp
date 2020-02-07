@@ -25,9 +25,10 @@ int main(int argc, char *argv[]) {
 
   algorithm_x::LangfordPairsProblem lp{4};
   lp.solve(false);
-  std::cout << "Solved Langford Pairs problem for n = 7! Here is the solution set "
-               "(each solution given as a set):\n";
+  std::cout
+      << "Solved Langford Pairs problem for n = 7! Here is the solution set "
+         "(each solution given as a set):\n";
   std::cout << lp.get_exact_cover_problem().solutions_string() << '\n';
-  
+
   return 0;
 }
